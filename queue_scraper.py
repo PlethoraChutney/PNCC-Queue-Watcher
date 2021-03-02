@@ -33,15 +33,37 @@ def get_old_samples(project):
     try:
         with open(f'{project}_samples.json') as infile:
             data = json.load(infile)
+
+        data['scheduled'] = [datetime.strptime(x, '%m/%d/%Y') for x in data['scheduled']]
+        data['scheduled'] = [x for x in data['scheduled'] if x < datetime.now()]
     except FileNotFoundError:
         logging.warning(f'{project}_samples.json not found. Making new empty one...')
-        data = {'ready': [], 'scheduled': []}
+        data = {'ready': 0, 'scheduled': []}
     
     return data
 
 def write_samples(project, samples):
     with open(f'{project}_samples.json', 'w') as f:
         json.dump(samples, f)
+
+def detect_changes(df, project):
+    current = find_current_samples(df, project)
+    old = get_old_samples(project)
+    new_ready = False
+    new_scheduled = False
+
+    if current['ready'] > old['ready']:
+        new_ready = current['ready'] - old['ready']
+    
+    if len(current['scheduled']) > len(old['scheduled']):
+        new_scheduled = [x for x in current['scheduled'] if x not in old['scheduled']]
+
+    print(new_scheduled)
+    print(new_ready)
+
+    current['scheduled'] = [x.strftime('%m/%d/%Y') for x in current['scheduled']]
+    write_samples(project, current)
+
 
 
 levels = [logging.WARNING, logging.INFO, logging.DEBUG]
@@ -50,9 +72,4 @@ level = logging.WARNING
 logging.basicConfig(level = level, format = '%(levelname)s: %(message)s')
 
 df = get_table(pncc_url)
-print(find_current_samples(df, 51815))
-print(find_current_samples(df, 51325))
-
-old = get_old_samples(51325)
-print(old)
-write_samples(51325, old)
+detect_changes(df, 51709)
