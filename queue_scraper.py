@@ -10,7 +10,7 @@ from slack.errors import SlackApiError
 from slackeventsapi import SlackEventAdapter
 
 pncc_url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJeJcd-fLAZbLxn0wZ9OFhUA9NTCJnNisHqBAlGnW85F4OGoNe5yYVT0RRjFA7-BIpMVOhH5DsUrWQ/pubhtml?gid=580698807&amp;single=true&amp;widget=false&amp;headers=false&amp;range=A1:V100'
-microscopy_channel = 'CAR3BED5L'
+microscopy_channel = os.environ['SLACK_MICROSCOPY_CHANNEL']
 
 def get_table(url):
     try:
