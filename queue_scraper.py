@@ -31,10 +31,14 @@ def find_current_samples(table, project):
     samples_ready = df.loc[df['Sample Onsite?'] == 'Yes']['ProjectID'].tolist()
     samples_scheduled = df.loc[pd.notna(df['Imaging Date'])]['Imaging Date'].tolist()
 
-    return {
+    return_dict = {
         'ready': len(samples_ready),
         'scheduled': [datetime.strptime(x, '%m/%d/%Y') for x in samples_scheduled]
     }
+
+    return_dict['scheduled'] = [x for x in return_dict['scheduled'] if x > datetime.now()]
+
+    return return_dict
 
 def get_old_samples(project):
     try:
@@ -102,12 +106,12 @@ def main(projects):
             if len(formatted) == 1:
                 slack_web_client.chat_postMessage(
                     channel = microscopy_channel,
-                    text = f'A sample has been (re)scheduled for {formatted[0]}'
+                    text = f'A sample has been (re)scheduled for {formatted[0]} in project {project}'
                 )
             else:
                 slack_web_client.chat_postMessage(
                     channel = microscopy_channel,
-                    text = f'Samples have been (re)scheduled: {formatted}'
+                    text = f'Samples have been (re)scheduled: {formatted} in project {project}'
                 )
 
 if __name__ == '__main__':
