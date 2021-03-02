@@ -1,10 +1,15 @@
 import pandas as pd
 import logging
 import json
+import os
 from datetime import datetime
 from urllib.error import HTTPError
+from slack import WebClient
+from slack.errors import SlackApiError
+from slackeventsapi import SlackEventAdapter
 
 pncc_url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJeJcd-fLAZbLxn0wZ9OFhUA9NTCJnNisHqBAlGnW85F4OGoNe5yYVT0RRjFA7-BIpMVOhH5DsUrWQ/pubhtml?gid=580698807&amp;single=true&amp;widget=false&amp;headers=false&amp;range=A1:V100'
+microscopy_channel = 'CAR3BED5L'
 
 def get_table(url):
     try:
@@ -63,6 +68,33 @@ def detect_changes(df, project):
 
     return (new_ready, new_scheduled)
 
+def main(project):
+    df = get_table(pncc_url)
+
+    new_ready, new_scheduled = detect_changes(df, project)
+
+    slack_web_client = WebClient(token=os.environ['SLACK_BOT_TOKEN'])
+
+
+    if new_ready:
+        slack_web_client.chat_postMessage(
+            channel = microscopy_channel,
+            text = f'You have {new_ready} sample(s) waiting to be scheduled in project {project}'
+        )
+
+    if new_scheduled:
+        formatted = [x.strftime('%m/%d/%Y') for x in new_scheduled]
+        if len(formatted) == 1:
+            slack_web_client.chat_postMessage(
+                channel = microscopy_channel,
+                text = f'A sample has been (re)scheduled for {formatted[0]}'
+            )
+        else:
+            slack_web_client.chat_postMessage(
+                channel = microscopy_channel,
+                text = f'Samples have been (re)scheduled: {formatted}'
+            )
+        
 
 
 levels = [logging.WARNING, logging.INFO, logging.DEBUG]
@@ -70,5 +102,5 @@ levels = [logging.WARNING, logging.INFO, logging.DEBUG]
 level = logging.WARNING
 logging.basicConfig(level = level, format = '%(levelname)s: %(message)s')
 
-df = get_table(pncc_url)
-detect_changes(df, 51709)
+if __name__ == '__main__':
+    main(51709)
