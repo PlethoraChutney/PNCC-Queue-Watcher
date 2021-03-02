@@ -58,11 +58,10 @@ def detect_changes(df, project):
     if len(current['scheduled']) > len(old['scheduled']):
         new_scheduled = [x for x in current['scheduled'] if x not in old['scheduled']]
 
-    print(new_scheduled)
-    print(new_ready)
-
     current['scheduled'] = [x.strftime('%m/%d/%Y') for x in current['scheduled']]
     write_samples(project, current)
+
+    return (new_ready, new_scheduled)
 
 
 
