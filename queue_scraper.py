@@ -3,6 +3,7 @@ import logging
 import json
 import os
 import argparse
+import sys
 from datetime import datetime
 from urllib.error import HTTPError
 from slack import WebClient
@@ -10,7 +11,17 @@ from slack.errors import SlackApiError
 from slackeventsapi import SlackEventAdapter
 
 pncc_url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJeJcd-fLAZbLxn0wZ9OFhUA9NTCJnNisHqBAlGnW85F4OGoNe5yYVT0RRjFA7-BIpMVOhH5DsUrWQ/pubhtml?gid=580698807&amp;single=true&amp;widget=false&amp;headers=false&amp;range=A1:V100'
-microscopy_channel = os.environ['SLACK_MICROSCOPY_CHANNEL']
+try:
+    microscopy_channel = os.environ['SLACK_MICROSCOPY_CHANNEL']
+except KeyError:
+    logging.error('Please put your slack microscopy channel in env variable SLACK_MICROSCOPY_CHANNEL')
+    sys.exit(1)
+
+try:
+    slack_bot_token = os.environ['SLACK_BOT_TOKEN']
+except KeyError:
+    logging.error('Please put your slack bot token in env variable SLACK_BOT_TOKEN')
+    sys.exit(1)
 
 def get_table(url):
     try:
@@ -90,7 +101,7 @@ def detect_changes(df, project):
 def main(projects):
     df = get_table(pncc_url)
 
-    slack_web_client = WebClient(token=os.environ['SLACK_BOT_TOKEN'])
+    slack_web_client = WebClient(token=slack_bot_token)
 
     for project in projects:
         
@@ -98,21 +109,20 @@ def main(projects):
         if new_ready:
             slack_web_client.chat_postMessage(
                 channel = microscopy_channel,
-                text = f'You have {new_ready} sample(s) waiting to be scheduled in project {project}'
+                text = f'You have {new_ready} new sample(s) waiting to be scheduled in project {project}'
             )
 
         if new_scheduled:
             formatted = [x.strftime('%m/%d/%Y') for x in new_scheduled]
             if len(formatted) == 1:
-                slack_web_client.chat_postMessage(
-                    channel = microscopy_channel,
-                    text = f'A sample has been (re)scheduled for {formatted[0]} in project {project}'
-                )
+                message_text = f'A sample has been (re)scheduled for {formatted[0]} in project {project}'
             else:
-                slack_web_client.chat_postMessage(
-                    channel = microscopy_channel,
-                    text = f'Samples have been (re)scheduled: {formatted} in project {project}'
-                )
+                message_text = f'Samples have been (re)scheduled: {formatted} in project {project}'
+
+            slack_web_client.chat_postMessage(
+                channel = microscopy_channel,
+                text = message_text
+            )
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
