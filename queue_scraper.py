@@ -101,16 +101,17 @@ def make_slack_client():
         logging.error('Please put your slack bot token in env variable SLACK_BOT_TOKEN')
         error_status = True
 
+    if error_status:
+        sys.exit(1)
+    
     slack_web_client = WebClient(token=slack_bot_token)
     try:
         slack_web_client.auth_test()
     except SlackApiError:
         logging.error('Slack authentication failed. Please check your bot token.')
-        error_status = True
-
-    if error_status:
         sys.exit(1)
 
+    
     return slack_web_client
     
 def main(projects):
