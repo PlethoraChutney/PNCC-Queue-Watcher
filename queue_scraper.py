@@ -87,21 +87,29 @@ def detect_changes(df, project):
     logging.debug(new_scheduled)
     return (new_ready, new_scheduled)
 
-def make_slack_client():
+def make_slack_client(args):
     error_status = False
-    try:
-        microscopy_channel = os.environ['SLACK_MICROSCOPY_CHANNEL']
-    except KeyError:
-        logging.error('Please put your slack microscopy channel in env variable SLACK_MICROSCOPY_CHANNEL')
-        error_status = True
 
-    try:
-        slack_bot_token = os.environ['SLACK_BOT_TOKEN']
-    except KeyError:
-        logging.error('Please put your slack bot token in env variable SLACK_BOT_TOKEN')
-        error_status = True
+    if args.channel:
+        microscopy_channel = args.channel
+    else:
+        try:
+            microscopy_channel = os.environ['SLACK_MICROSCOPY_CHANNEL']
+        except KeyError:
+            logging.error('Please put your slack microscopy channel in env variable SLACK_MICROSCOPY_CHANNEL')
+            error_status = True
 
-    if error_status:
+    if args.token:
+        slack_bot_token = args.token
+    else:
+        try:
+            slack_bot_token = os.environ['SLACK_BOT_TOKEN']
+        except KeyError:
+            logging.error('Please put your slack bot token in env variable SLACK_BOT_TOKEN')
+            error_status = True
+
+    # if the user provided a bot token we can test it even without a channel
+    if error_status and not slack_bot_token:
         sys.exit(1)
     
     slack_web_client = WebClient(token=slack_bot_token)
@@ -109,16 +117,19 @@ def make_slack_client():
         slack_web_client.auth_test()
     except SlackApiError:
         logging.error('Slack authentication failed. Please check your bot token.')
+        error_status = True
+
+    # we need to check this again in case setting the channel failed
+    if error_status:
         sys.exit(1)
-
     
-    return slack_web_client
+    return (slack_web_client, microscopy_channel)
     
-def main(projects):
+def main(args):
     df = get_table(pncc_url)
-    slack_web_client = make_slack_client()
+    slack_web_client, microscopy_channel = make_slack_client(args)
 
-    for project in projects:
+    for project in args.project:
         
         new_ready, new_scheduled = detect_changes(df, project)
         if new_ready:
@@ -139,27 +150,37 @@ def main(projects):
                 text = message_text
             )
 
+parser = argparse.ArgumentParser(
+    description = 'Check the PNCC dynamic queue for new sample schedulings',
+)
+parser.add_argument(
+    'project',
+    nargs = '+',
+    help = 'Projects to check',
+    type = int
+)
+parser.add_argument(
+    '-v', '--verbose',
+    help = 'Get more informational messages',
+    action = 'count',
+    default = 0
+)
+parser.add_argument(
+    '--token',
+    help = 'Slack bot token. If not provided, will use SLACK_BOT_TOKEN env variable',
+    type = str
+)
+parser.add_argument(
+    '--channel',
+    help = 'Slack channel ID to post to. If not provided, will use SLACK_MICROSCOPY_CHANNEL env variable',
+    type = str
+)
+
+args = parser.parse_args()
+
+levels = [logging.WARNING, logging.INFO, logging.DEBUG]
+level = levels[min(len(levels) - 1, args.verbose)]
+logging.basicConfig(level = level, format = '%(levelname)s: %(message)s')
+
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description = 'Check the PNCC dynamic queue for new sample schedulings',
-    )
-    parser.add_argument(
-        'project',
-        nargs = '+',
-        help = 'Projects to check',
-        type = int
-    )
-    parser.add_argument(
-        '-v', '--verbose',
-        help = 'Get more informational messages',
-        action = 'count',
-        default = 0
-    )
-
-    args = parser.parse_args()
-
-    levels = [logging.WARNING, logging.INFO, logging.DEBUG]
-    level = levels[min(len(levels) - 1, args.verbose)]
-    logging.basicConfig(level = level, format = '%(levelname)s: %(message)s')
-
-    main(args.project)
+    main(args)
