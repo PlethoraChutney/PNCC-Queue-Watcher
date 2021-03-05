@@ -11,17 +11,6 @@ from slack.errors import SlackApiError
 from slackeventsapi import SlackEventAdapter
 
 pncc_url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJeJcd-fLAZbLxn0wZ9OFhUA9NTCJnNisHqBAlGnW85F4OGoNe5yYVT0RRjFA7-BIpMVOhH5DsUrWQ/pubhtml?gid=580698807&amp;single=true&amp;widget=false&amp;headers=false&amp;range=A1:V100'
-try:
-    microscopy_channel = os.environ['SLACK_MICROSCOPY_CHANNEL']
-except KeyError:
-    logging.error('Please put your slack microscopy channel in env variable SLACK_MICROSCOPY_CHANNEL')
-    sys.exit(1)
-
-try:
-    slack_bot_token = os.environ['SLACK_BOT_TOKEN']
-except KeyError:
-    logging.error('Please put your slack bot token in env variable SLACK_BOT_TOKEN')
-    sys.exit(1)
 
 def get_table(url):
     try:
@@ -98,10 +87,35 @@ def detect_changes(df, project):
     logging.debug(new_scheduled)
     return (new_ready, new_scheduled)
 
-def main(projects):
-    df = get_table(pncc_url)
+def make_slack_client():
+    error_status = False
+    try:
+        microscopy_channel = os.environ['SLACK_MICROSCOPY_CHANNEL']
+    except KeyError:
+        logging.error('Please put your slack microscopy channel in env variable SLACK_MICROSCOPY_CHANNEL')
+        error_status = True
+
+    try:
+        slack_bot_token = os.environ['SLACK_BOT_TOKEN']
+    except KeyError:
+        logging.error('Please put your slack bot token in env variable SLACK_BOT_TOKEN')
+        error_status = True
 
     slack_web_client = WebClient(token=slack_bot_token)
+    try:
+        slack_web_client.auth_test()
+    except SlackApiError:
+        logging.error('Slack authentication failed. Please check your bot token.')
+        error_status = True
+
+    if error_status:
+        sys.exit(1)
+
+    return slack_web_client
+    
+def main(projects):
+    df = get_table(pncc_url)
+    slack_web_client = make_slack_client()
 
     for project in projects:
         
@@ -117,7 +131,7 @@ def main(projects):
             if len(formatted) == 1:
                 message_text = f'A sample has been (re)scheduled for {formatted[0]} in project {project}'
             else:
-                message_text = f'Samples have been (re)scheduled: {formatted} in project {project}'
+                message_text = f'Samples have been (re)scheduled in project {project} for the following dates:\n{formatted}'
 
             slack_web_client.chat_postMessage(
                 channel = microscopy_channel,
