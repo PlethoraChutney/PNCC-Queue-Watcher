@@ -107,6 +107,7 @@ def make_slack_client(args):
         except KeyError:
             logging.error('Please put your slack bot token in env variable SLACK_BOT_TOKEN')
             error_status = True
+            slack_bot_token = False
 
     # if the user provided a bot token we can test it even without a channel
     if error_status and not slack_bot_token:
