@@ -10,11 +10,11 @@ from slack import WebClient
 from slack.errors import SlackApiError
 from slackeventsapi import SlackEventAdapter
 
-pncc_url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJeJcd-fLAZbLxn0wZ9OFhUA9NTCJnNisHqBAlGnW85F4OGoNe5yYVT0RRjFA7-BIpMVOhH5DsUrWQ/pubhtml?gid=580698807&amp;single=true&amp;widget=false&amp;headers=false&amp;range=A1:V100'
+pncc_url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJeJcd-fLAZbLxn0wZ9OFhUA9NTCJnNisHqBAlGnW85F4OGoNe5yYVT0RRjFA7-BIpMVOhH5DsUrWQ/pubhtml?gid=580698807'
 
 def get_table(url):
     try:
-        df = pd.read_html(url, header = 2)[1]
+        df = pd.read_html(url, header = 2)[0]
     except HTTPError:
         logging.error(f'Could not find dynamic queue sheet at {url}')
     logging.debug(df)
