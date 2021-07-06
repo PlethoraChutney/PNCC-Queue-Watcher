@@ -30,7 +30,8 @@ def find_current_samples(table, project):
         return {'ready': 0, 'scheduled': []}
 
     samples_ready = df.loc[df['Sample Onsite?'] == 'Yes']['ProjectID'].tolist()
-    samples_scheduled = df.loc[pd.notna(df['Imaging Date'])]['Imaging Date'].tolist()
+    samples_scheduled = df.loc[df['Current Status'] == 'SCHEDULED']['Imaging Date'].tolist()
+    logging.debug(samples_scheduled)
 
     return_dict = {
         'ready': len(samples_ready),
