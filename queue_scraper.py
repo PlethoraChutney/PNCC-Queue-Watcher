@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import pandas as pd
 import logging
 import json
@@ -10,7 +11,7 @@ from slack import WebClient
 from slack.errors import SlackApiError
 from slackeventsapi import SlackEventAdapter
 
-pncc_url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJeJcd-fLAZbLxn0wZ9OFhUA9NTCJnNisHqBAlGnW85F4OGoNe5yYVT0RRjFA7-BIpMVOhH5DsUrWQ/pubhtml?gid=580698807'
+pncc_url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJeJcd-fLAZbLxn0wZ9OFhUA9NTCJnNisHqBAlGnW85F4OGoNe5yYVT0RRjFA7-BIpMVOhH5DsUrWQ/pubhtml?gid=580698807&single=true&widget=false&headers=false&range=A1:W100'
 
 def get_table(url):
     try:
